@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoE Layouts</title>
+<style>
+  :root {
+    --bg: #0d0f12; --panel: #161a20; --line: #262c35; --text: #e6e3dc; --muted: #8a8f98;
+    --accent: #d9a441; --accent-dim: #d9a44133; --ok: #5bbf72; --bad: #d0564b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { display: flex; align-items: baseline; gap: 14px; padding: 12px 18px;
+    border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  .act { color: var(--accent); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: 13px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 650; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); display: inline-block; align-self: center; }
+  .dot.on { background: var(--ok); }
+  .hint { padding: 12px 18px 4px; font-size: 22px; font-weight: 650; color: var(--accent); line-height: 1.3; }
+  .hint:empty { display: none; }
+  .card .tell { display: block; padding: 6px 8px 8px; text-align: left; color: var(--text); font-size: 14px; background: var(--panel); border-radius: 0 0 8px 8px; }
+  .crumbs { display: flex; gap: 6px; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .crumbs button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 3px 10px; cursor: pointer; font: inherit; }
+  .crumbs button:hover { border-color: var(--accent); }
+  .crumbs .cur { color: var(--accent); font-weight: 650; }
+  .crumbs .help { margin-left: auto; color: var(--muted); font-size: 13px; }
+  .cards { flex: 1; min-height: 0; min-width: 0; display: grid; gap: 10px; justify-content: center; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-content: start; overflow: auto; }
+  .card { position: relative; border: 2px solid var(--line); border-radius: 10px; background: #000; cursor: pointer; padding: 0; color: inherit; }
+  .card:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .card img { width: 100%; max-height: var(--cell, 60vh); object-fit: contain; display: block; border-radius: 8px; }
+  .card .tag { position: absolute; top: 6px; left: 8px; font-weight: 700; text-shadow: 0 0 4px #000, 0 0 2px #000; }
+  .card .start { position: absolute; top: 4px; right: 4px; z-index: 1; width: 36%; max-height: none; border: 1px solid var(--accent); border-radius: 6px; background: #000; }
+  .card .tag small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .leaf { flex: 1; display: flex; justify-content: center; min-height: 0; overflow: auto; }
+  .leaf img { max-height: calc(100vh - 170px); max-width: 100%; object-fit: contain; background: #000; border: 1px solid var(--line); border-radius: 8px; }
+  main { flex: 1; display: flex; gap: 16px; padding: 16px 18px; min-height: 0; }
+  aside { width: 300px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+  aside:empty { display: none; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .box h2 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .box ul { margin: 0; padding-left: 18px; }
+  .box li { margin: 3px 0; }
+  .hints img { width: 100%; border-radius: 6px; margin-top: 6px; background: #000; }
+  .empty { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: var(--muted); text-align: center; gap: 6px; }
+  .empty b { color: var(--text); font-size: 20px; font-weight: 600; }
+  .warn { color: var(--accent); }
+  kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 12px; color: var(--muted); }
+  .timer { display: flex; align-items: baseline; gap: 12px; font-variant-numeric: tabular-nums; }
+  .timer:empty { display: none; }
+  .t-total { font-size: 22px; font-weight: 700; }
+  .t-sub { color: var(--muted); font-size: 13px; }
+  .t-sub b { color: var(--text); font-weight: 600; }
+  .timer.paused .t-total { color: var(--muted); }
+  .timer button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 1px 8px; cursor: pointer; font: inherit; font-size: 13px; }
+  .timer button:hover { border-color: var(--accent); }
+  .splits table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .splits td { padding: 2px 0; }
+  .splits td.n { text-align: right; padding-left: 8px; }
+  .splits tr.cur td { color: var(--accent); }
+  .splits .muted { color: var(--muted); }
+  .ahead { color: var(--ok); } .behind { color: var(--bad); }
+  .map { position: relative; display: block; }
+  .leaf .map { display: inline-block; }
+  .card .start.l { right: auto; left: 4px; } .card .start.b { top: auto; bottom: 4px; }
+  .mk { z-index: 2; position: absolute; transform: translate(-50%, -50%); pointer-events: none; aspect-ratio: 1; }
+  .mk .ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--c); box-shadow: 0 0 0 2px #000, 0 0 12px var(--c); }
+  .mk .lbl { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 3px; background: var(--c); color: #000;
+    font: 800 11px/1.5 system-ui, sans-serif; padding: 0 5px; border-radius: 4px; white-space: nowrap; box-shadow: 0 0 0 1px #000; }
+  .mk.below .lbl { bottom: auto; top: 100%; margin: 3px 0 0; }
+  .leaf .mk .lbl { font-size: 14px; }
+  .trial a { color: var(--accent); }
+  .trial { border-color: var(--accent); }
+  .legend summary { cursor: pointer; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .legend ul { list-style: none; padding: 0; margin: 8px 0; font-size: 13px; }
+  .legend .lg { display: inline-block; min-width: 44px; text-align: center; color: #000; font-weight: 800; font-size: 11px; border-radius: 4px; padding: 0 4px; }
+  .legend .dice { background: #3a0f3f; color: #fff; } .legend .yel { background: #3a3a10; color: #ffeb3b; border: 1px solid #ffeb3b; }
+  .legend .grn { background: none; color: #3ddc84; }
+  .legend button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 2px 10px; cursor: pointer; font: inherit; font-size: 13px; }
+  .labbtn { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 1px 9px; cursor: pointer; font: inherit; font-size: 13px; }
+  .labbtn:hover { border-color: var(--accent); color: var(--text); }
+  .lab { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow: auto; }
+  .labmap { width: 100%; max-height: 52vh; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  .labmap .e { stroke: #3b4350; stroke-width: 4; } .labmap .e.hot { stroke: #3ddc84; stroke-width: 6; }
+  .labmap circle { fill: #20252d; stroke: #4a525e; stroke-width: 3; }
+  .labmap .path circle { stroke: #3ddc84; } .labmap .cur circle { fill: var(--accent); stroke: #fff; }
+  .labmap .n { text-anchor: middle; font: 700 14px system-ui; fill: var(--text); } .labmap .cur .n { fill: #000; }
+  .labmap .b { text-anchor: middle; font: 800 12px system-ui; }
+  .labnext { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .labrooms { border-collapse: collapse; font-size: 13px; } .labrooms td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--line); }
+  .labrooms tr.path td:first-child { color: #3ddc84; font-weight: 700; } .labrooms tr.cur td { color: var(--accent); }
+  .labrooms .muted, .lab .muted { color: var(--muted); }
+  .labimport { background: var(--panel); border: 1px dashed var(--accent); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .lab a { color: var(--accent); }
+  @media (max-width: 760px) { main { flex-direction: column; } aside { width: auto; } }
+  /* Portrait / half-screen window: info goes under the maps, maps get the full width. */
+  @media (max-aspect-ratio: 1/1) {
+    main { flex-direction: column; }
+    aside { width: auto; flex-direction: row; flex-wrap: wrap; align-items: flex-start; max-height: 34vh; }
+    aside .box { flex: 1 1 260px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="act" id="act"></span>
+  <h1 id="name">Waiting for the game…</h1>
+  <span class="meta" id="meta"></span>
+  <span class="spacer"></span>
+  <button class="labbtn" id="labbtn" title="Labyrinth map (Lab Compass file from poelab.com)">Lab</button>
+  <span class="timer" id="timer"></span>
+  <span class="dot" id="dot" title="connection"></span>
+</header>
+<div class="hint" id="hint"></div>
+<nav class="crumbs" id="crumbs"></nav>
+<main id="main"></main>
+<script>
+// Static build only: reads Client.txt in the browser (File System Access API,
+// Chrome/Edge) instead of talking to the poe-layouts server. Nothing leaves the
+// computer. The timer follows the same rules as src/timer.rs.
+(() => {
+  "use strict";
+  const START = "1_1_1", COAST = "1_1_2", SCAN = 4 << 20, POLL_MS = 1000, KEY = "poe-layouts-timer", IDLE_MS = 5 * 60 * 1000;
+  const AREA_RE = /\] Generating level (\d+) area "([^"]+)" with seed (\d+)/;
+  const TS_RE = /^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2}) /;
+  const tsOf = (l) => {
+    const m = TS_RE.exec(l);
+    return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : null;
+  };
+
+  let zones = {}, onState = null, cur = null, seq = 0, lastPublish = 0, entered = null;
+  const ENTERED_RE = /\] : You have entered (.+)\.$/;
+
+  // ---------- timer ----------
+  const blank = () => ({ run: null, prev: [], last_event: 0, last_activity: 0 });
+  let timer = blank();
+  try { timer = JSON.parse(localStorage.getItem(KEY)) || blank(); } catch (_) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(timer)); } catch (_) {} };
+  const active = (v, now) => v.ms + (v.since != null ? Math.max(0, now - v.since) : 0);
+  const last = () => timer.run && timer.run.visits[timer.run.visits.length - 1];
+  function close(at) {
+    const v = last();
+    if (v && v.since != null) { v.ms += Math.max(0, at - v.since); v.since = null; }
+  }
+  function actEnds(run, now) {
+    const out = []; let cum = 0;
+    for (const v of run.visits) {
+      cum += active(v, now);
+      const e = out[out.length - 1];
+      if (e && e.act === v.act) e.end_ms = cum; else out.push({ act: v.act, end_ms: cum });
+    }
+    return out;
+  }
+  function startRun(at) {
+    close(at);
+    const old = timer.run;
+    if (old) {
+      const ends = actEnds(old, at);
+      ends.pop(); // only finished acts are worth comparing against
+      if (ends.length) timer.prev = ends;
+    }
+    timer.run = { started: at, visits: [], paused: false };
+  }
+  // Silence beyond IDLE_MS since the previous log line (AFK, crash) is not counted.
+  function activity(at) {
+    const la = timer.last_activity || 0, v = last();
+    if (la > 0 && at - la > IDLE_MS && v && v.since != null && v.since <= la) v.since += at - la - IDLE_MS;
+    timer.last_activity = Math.max(la, at);
+  }
+  function gameClosed(at) {
+    timer.last_event = Math.max(timer.last_event, at);
+    activity(at);
+    close(at);
+  }
+  function enter(at, a) {
+    timer.last_event = Math.max(timer.last_event, at);
+    activity(at);
+    const l = last();
+    // New character = fresh Twilight Strand (not walking back from The Coast, not a relog).
+    const fresh = !l ? !timer.run && a.campaign
+      : a.id === START && l.id !== COAST && !(l.id === START && (a.seed == null || l.seed === a.seed));
+    if (fresh) startRun(at);
+    close(at);
+    const run = timer.run;
+    if (!run) return;
+    run.paused = false;
+    const v = run.visits[run.visits.length - 1];
+    if (v && v.id === a.id) { v.since = at; if (a.seed != null) v.seed = a.seed; return; }
+    const ca = v ? v.act : 1;
+    run.visits.push({ id: a.id, name: a.name, act: a.act != null ? Math.max(a.act, ca) : ca,
+      campaign: a.campaign, seed: a.seed, ms: 0, since: at });
+  }
+  function gameStarted(at, lastSeen) {
+    timer.last_event = Math.max(timer.last_event, at);
+    const v = last();
+    if (v && v.since != null) {
+      v.ms += Math.max(0, Math.min(lastSeen != null ? lastSeen : v.since, at) - v.since);
+      v.since = null;
+    }
+    activity(at);
+  }
+  function view(wall) {
+    const run = timer.run;
+    if (!run) return null;
+    const cutoff = timer.last_activity > 0 ? timer.last_activity + IDLE_MS : null;
+    const now = cutoff != null ? Math.min(wall, cutoff) : wall;
+    const c = last(), sum = (vs) => vs.reduce((s, v) => s + active(v, now), 0);
+    const acts = []; let st = 0;
+    for (const e of actEnds(run, now)) {
+      const p = timer.prev.find((x) => x.act === e.act);
+      acts.push({ act: e.act, ms: e.end_ms - st, end_ms: e.end_ms, prev_end_ms: p ? p.end_ms : null });
+      st = e.end_ms;
+    }
+    return {
+      at: wall, running: !!c && c.since != null && (cutoff == null || wall < cutoff),
+      idle_in_ms: cutoff != null ? Math.max(0, cutoff - wall) : null, paused: run.paused, started: run.started,
+      total_ms: sum(run.visits), zone_ms: c ? active(c, now) : 0,
+      zone_total_ms: c ? sum(run.visits.filter((v) => v.id === c.id)) : 0,
+      act: c ? c.act : 1, act_ms: acts.length ? acts[acts.length - 1].ms : 0, acts,
+      recent: run.visits.slice(0, -1).reverse().slice(0, 12)
+        .map((v) => ({ id: v.id, name: v.name, act: v.act, campaign: v.campaign, ms: v.ms })),
+    };
+  }
+
+  // ---------- zones ----------
+  function zoneFor(id) {
+    if (zones[id]) return zones[id];
+    const kind = id.startsWith("Hideout") ? "hideout" : id.startsWith("MapWorlds") ? "map"
+      : id.includes("Labyrinth") ? "labyrinth" : id.endsWith("_town") ? "town" : "other";
+    return { id, kind, name: null, act: null, level: null, layouts: [], hints: [], hint: null,
+      direction: null, facts: [], notes: [], missing_images: 0 };
+  }
+  const publish = () => onState && onState({ enabled: true, visible: !!cur, variant: 0, seq: ++seq,
+    zone: cur, timer: view(Date.now()), entered });
+
+  // ---------- log ----------
+  let handle = null, pos = 0, partial = "", decoder = new TextDecoder(), lastTs = null, first = true, busy = false;
+
+  function handleLines(lines, history) {
+    const seen = timer.last_event;
+    const isFresh = (at) => !history || at > seen;
+    let lastArea = null, events = 0;
+    for (const l of lines) {
+      const ts = tsOf(l);
+      const en = l.includes("] : You have entered ") && ENTERED_RE.exec(l);
+      if (en) {
+        events++;
+        entered = { name: en[1], n: (entered ? entered.n : 0) + 1 };
+      } else if (l.includes("] Closing game gracefully")) {
+        events++;
+        const at = ts != null ? ts : Date.now();
+        if (isFresh(at)) gameClosed(at);
+      } else if (l.includes("***** LOG FILE OPENING *****")) {
+        events++;
+        const at = ts != null ? ts : Date.now();
+        if (isFresh(at)) gameStarted(at, lastTs);
+      } else if (l.includes("Generating level")) {
+        const m = AREA_RE.exec(l);
+        if (m) {
+          events++;
+          const at = ts != null ? ts : Date.now(), z = zoneFor(m[2]);
+          if (isFresh(at)) enter(at, { id: z.id, name: z.name, act: z.act, campaign: z.kind === "campaign", seed: +m[3] });
+          lastArea = z;
+          if (!history) cur = z;
+        }
+      }
+      if (ts != null) lastTs = ts;
+    }
+    if (history && lastArea) cur = lastArea;
+    // Plain activity only republishes when it changed something or every 30 s.
+    const before = JSON.stringify({ ...timer, last_activity: 0 });
+    if (lastTs != null && isFresh(lastTs)) activity(lastTs);
+    const changed = events > 0 || before !== JSON.stringify({ ...timer, last_activity: 0 });
+    save();
+    if (changed || Date.now() - lastPublish >= 30000) { lastPublish = Date.now(); publish(); }
+  }
+
+  async function poll() {
+    if (!handle || busy) return;
+    busy = true;
+    try {
+      const f = await handle.getFile();
+      if (f.size < pos) { pos = 0; partial = ""; decoder = new TextDecoder(); } // game relaunched
+      const from = first ? Math.max(0, f.size - SCAN) : pos;
+      if (f.size === from && !first) return;
+      const text = partial + decoder.decode(await f.slice(from, f.size).arrayBuffer(), { stream: true });
+      pos = f.size;
+      const lines = text.split("\n");
+      partial = lines.pop();
+      if (first && from > 0) lines.shift(); // started mid-line
+      const history = first;
+      first = false;
+      handleLines(lines.map((l) => l.replace(/\r$/, "")), history);
+      setStatus(`Reading ${f.name}`, true);
+    } catch (e) {
+      setStatus(`Cannot read the log (${e.message}). Pick it again.`, false);
+      showPicker(null);
+      handle = null;
+    } finally {
+      busy = false;
+    }
+  }
+
+  // ---------- picker UI ----------
+  let bar = null;
+  function setStatus(text, ok) {
+    const dot = document.getElementById("dot");
+    if (dot) { dot.classList.toggle("on", ok); dot.title = text; }
+    if (ok && bar) { bar.remove(); bar = null; }
+  }
+  function db() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("poe-layouts", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  }
+  async function kv(key, value) {
+    try {
+      const d = await db();
+      return await new Promise((res) => {
+        const tx = d.transaction("kv", value === undefined ? "readonly" : "readwrite"), st = tx.objectStore("kv");
+        const r = value === undefined ? st.get(key) : st.put(value, key);
+        r.onsuccess = () => res(r.result); r.onerror = () => res(undefined);
+      });
+    } catch (_) { return undefined; }
+  }
+  function use(h) {
+    handle = h; pos = 0; partial = ""; decoder = new TextDecoder(); first = true;
+    kv("log", h);
+    poll();
+  }
+  function showPicker(saved) {
+    if (bar) bar.remove();
+    const btn = (label, fn) => { const b = document.createElement("button"); b.textContent = label; b.onclick = fn; return b; };
+    bar = document.createElement("div");
+    bar.className = "picker";
+    if (!window.showOpenFilePicker) {
+      bar.append("This page reads the game log directly and needs Chrome or Edge (Firefox cannot follow a local file).");
+    } else {
+      const pick = btn("Choose Client.txt", async () => {
+        try {
+          const [h] = await window.showOpenFilePicker({ types: [{ description: "Path of Exile log", accept: { "text/plain": [".txt"] } }] });
+          use(h);
+        } catch (_) { /* cancelled */ }
+      });
+      bar.append(pick);
+      if (saved) {
+        bar.append(" ", btn(`Continue with ${saved.name}`, async () => {
+          if ((await saved.requestPermission({ mode: "read" })) === "granted") use(saved);
+        }));
+      }
+      // Chrome refuses files under "system" folders (Program Files, ~/.local/share), where
+      // Steam keeps the game. A hard link in Documents is the same file under a readable path.
+      const win = /Windows/i.test(navigator.userAgent);
+      const cmd = win
+        ? 'mklink /H "%USERPROFILE%\\Documents\\PoE-Client.txt" "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Path of Exile\\logs\\Client.txt"'
+        : 'ln ~/.local/share/Steam/steamapps/common/"Path of Exile"/logs/Client.txt ~/Documents/PoE-Client.txt';
+      const list = document.createElement("div");
+      list.className = "paths";
+      const step = (html) => { const d = document.createElement("div"); d.innerHTML = html; list.append(d); return d; };
+      step("<b>Game installed via Steam in the default folder?</b> Chrome won't open files there (\u201csystem files\u201d). "
+        + "Run this once in " + (win ? "<b>cmd</b> (Win+R \u2192 cmd)" : "a terminal") + " \u2014 it makes a link to the same log in Documents:");
+      const row = step(""), code = document.createElement("code");
+      code.textContent = cmd;
+      const copy = btn("copy", async () => {
+        try { await navigator.clipboard.writeText(cmd); copy.textContent = "copied"; } catch (_) { copy.textContent = "select & Ctrl+C"; }
+        setTimeout(() => (copy.textContent = "copy"), 1500);
+      });
+      copy.className = "copy";
+      row.append(copy, " ", code);
+      step("Then click <b>Choose Client.txt</b> \u2192 Documents \u2192 <b>PoE-Client.txt</b>.");
+      const note = document.createElement("div");
+      note.className = "muted";
+      note.textContent = win
+        ? "Standalone client (not Steam)? Use C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile\\logs\\Client.txt as the second path. "
+          + "Game on another drive (e.g. D:\\SteamLibrary)? Pick …\\Path of Exile\\logs\\Client.txt directly; a hard link only works "
+          + "on the same drive, so if needed link it to D:\\PoE-Client.txt instead. The log is read locally, never uploaded."
+        : "Game in another folder? Pick …/Path of Exile/logs/Client.txt directly; if Chrome refuses, link it the same way "
+          + "(a hard link must stay on the same disk). The log is read locally, never uploaded.";
+      bar.append(list, note);
+    }
+    document.body.insertBefore(bar, document.body.firstChild);
+  }
+
+  window.PoeEngine = {
+    async start(apply) {
+      onState = apply;
+      const style = document.createElement("style");
+      style.textContent = ".picker{padding:12px 18px;background:var(--accent-dim);border-bottom:1px solid var(--accent);font-size:14px}"
+        + ".picker button{background:var(--accent);color:#000;border:0;border-radius:6px;padding:5px 12px;font:inherit;font-weight:650;cursor:pointer}"
+        + ".picker code{color:var(--text);user-select:all}.picker .paths{margin-top:8px}.picker .paths div{margin-top:4px}"
+        + ".picker button.copy{background:none;color:var(--accent);border:1px solid var(--accent);padding:1px 8px;font-weight:500}"
+        + ".picker .muted{color:var(--muted);margin-top:6px;font-size:13px}";
+      document.head.append(style);
+      try { zones = await (await fetch("zones.json")).json(); } catch (e) { setStatus("zones.json failed to load", false); }
+      const dot = document.getElementById("dot");
+      if (dot) {
+        const a = document.createElement("a");
+        a.href = "LICENSES.txt"; a.textContent = "credits"; a.className = "meta"; a.style.color = "var(--muted)";
+        dot.before(a);
+      }
+      publish();
+      const saved = await kv("log");
+      if (saved && (await saved.queryPermission({ mode: "read" })) === "granted") use(saved);
+      else showPicker(saved);
+      setInterval(poll, POLL_MS);
+    },
+    /** Tests: feed log lines without a file. */
+    _feed(lines, history, zoneMap) { if (zoneMap) zones = zoneMap; handleLines(lines, history); return timer; },
+    timer(cmd) {
+      const now = Date.now();
+      timer.last_activity = Math.max(timer.last_activity || 0, now);
+      if (cmd === "pause") { close(now); if (timer.run) timer.run.paused = true; }
+      else if (cmd === "resume" || (cmd === "toggle" && timer.run && timer.run.paused)) {
+        const r = timer.run, v = last();
+        if (r) { r.paused = false; if (v && v.since == null) v.since = now; }
+      } else if (cmd === "toggle") { close(now); if (timer.run) timer.run.paused = true; }
+      else if (cmd === "reset") {
+        startRun(now);
+        if (cur) enter(now, { id: cur.id, name: cur.name, act: cur.act, campaign: cur.kind === "campaign", seed: null });
+      }
+      save();
+      publish();
+    },
+  };
+})();
+
+</script>
+<script>
+"use strict";
+// Layout images form a decision tree per zone: "2" → "2_1" | "2_2" → "2_2_1" | "2_2_2".
+// Inner nodes are partial views to tell variants apart; leaves are full maps.
+const $ = (id) => document.getElementById(id);
+let state = null;
+let path = "";        // current node code; "" = root
+// Default: every full map of the zone at once (no clicks). "Step by step" walks the tree.
+let steps = false;
+try { steps = localStorage.getItem("steps") === "1"; } catch (_) {}
+function setSteps(on) { steps = on; try { localStorage.setItem("steps", on ? "1" : "0"); } catch (_) {} go(""); }
+let zoneId = null;
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const k of kids) e.append(k);
+  return e;
+}
+
+const KIND = { town: "Town", hideout: "Hideout", map: "Map", labyrinth: "Labyrinth", other: "Area", campaign: "" };
+const parentOf = (code) => (code.includes("_") ? code.slice(0, code.lastIndexOf("_")) : "");
+
+function nodes(z) {
+  const out = [];
+  z.layouts.forEach((l) => l.images.forEach((url, i) => {
+    // Custom (override) images have no codes: each is a top-level leaf.
+    const code = l.codes.length ? l.codes[i] : `custom-${i + 1}`;
+    out.push({ code, url, tell: l.codes.length ? l.tell : null, marks: (l.marks && l.marks[i]) || [] });
+  }));
+  return out;
+}
+const childrenOf = (all, p) => all.filter((n) => parentOf(n.code) === p);
+const label = (code) => code.replace(/_/g, " › ");
+
+// Clear labels on top of Exile-UI's small icons (entrance square, doors, waypoint).
+const MARK = {
+  start: ["START", "#3ddc84", "Where you enter the zone"],
+  exit: ["EXIT", "#ff5252", "Door to another zone"],
+  altexit: ["EXIT?", "#ffb020", "Exit is at one of the yellow-framed doors"],
+  quest: ["QUEST", "#ffd740", "Door to a side area with a quest"],
+  boss: ["BOSS", "#e066ff", "Door to a boss / boss area"],
+};
+let showMarks = true;
+try { showMarks = localStorage.getItem("marks") !== "0"; } catch (_) {}
+function setMarks(on) { showMarks = on; try { localStorage.setItem("marks", on ? "1" : "0"); } catch (_) {} render(); }
+// The start-view inset goes into the corner with the fewest icons under it.
+function insetEl(url, marks) {
+  const corners = [["", 0.62, 0.38], ["l", 0.38, 0.38], ["b", 0.62, 0.62], ["l b", 0.38, 0.62]];
+  const busy = ([, cx, cy]) => marks.filter((m) => MARK[m.t] && (cx > 0.5 ? m.x > cx : m.x < cx) && (cy > 0.5 ? m.y > cy : m.y < cy)).length;
+  const best = corners.reduce((a, c) => (busy(c) < busy(a) ? c : a));
+  return el("img", { class: `start ${best[0]}`, src: url, alt: "start" });
+}
+function mapEl(n) {
+  const box = el("div", { class: "map" }, el("img", { src: n.url, alt: label(n.code) }));
+  const placed = [];
+  if (showMarks) for (const m of n.marks.filter((m) => MARK[m.t]).sort((a, b) => a.y - b.y)) {
+    const [text, color, title] = MARK[m.t] || [m.t, "#fff", ""];
+    // Label above unless it would leave the map or sit on a label already placed nearby.
+    const crowded = placed.some((p) => Math.abs(p.x - m.x) < 0.16 && Math.abs(p.y - m.y) < 0.1);
+    const below = m.y < 0.12 || crowded;
+    placed.push(m);
+    const mk = el("span", { class: "mk" + (below ? " below" : ""), title },
+      el("span", { class: "ring" }), el("span", { class: "lbl" }, text));
+    mk.style.left = `${m.x * 100}%`;
+    mk.style.top = `${m.y * 100}%`;
+    mk.style.width = `${Math.max(m.size, 0.04) * 170}%`;
+    mk.style.setProperty("--c", color);
+    box.append(mk);
+  }
+  return box;
+}
+// Zones with a Trial of Ascendancy (normal Labyrinth). Guide content stays on poelab.com.
+const TRIALS = new Set(["1_1_7_1", "1_2_5_1", "1_2_6_2", "1_3_3_1", "1_3_6", "1_3_15"]);
+const POELAB = "https://www.poelab.com/gauntlets-puzzles/";
+function trialBox() {
+  return el("div", { class: "box trial" }, el("h2", {}, "Trial of Ascendancy"),
+    "This zone has a Labyrinth trial (needed for your Ascendancy). Traps and puzzles: ",
+    el("a", { href: POELAB, target: "_blank", rel: "noopener" }, "poelab: Gauntlets & Puzzles ↗"));
+}
+
+function legend() {
+  const row = (sw, text) => el("li", {}, sw, " ", text);
+  const tag = (t) => { const [s, c] = MARK[t]; const e = el("span", { class: "lg" }, s); e.style.background = c; return e; };
+  return el("details", { class: "box legend" }, el("summary", {}, "Map legend"),
+    el("ul", {},
+      ...Object.keys(MARK).map((t) => row(tag(t), MARK[t][2])),
+      row(el("span", { class: "lg dice" }, "⚀"), "Point of interest; pips = suggested order (grey = optional)"),
+      row(el("span", { class: "lg yel" }, "▢"), "Yellow frame: the thing is at one of these spots"),
+      row(el("span", { class: "lg grn" }, "~"), "Green lines/text: clues to match with your minimap")),
+    el("button", { onclick: () => setMarks(!showMarks) }, showMarks ? "Hide labels" : "Show labels"));
+}
+
+function go(p) { path = p; render(); window.scrollTo(0, 0); }
+
+function render() {
+  const main = $("main"), crumbs = $("crumbs");
+  main.replaceChildren(); crumbs.replaceChildren();
+  const z = state && state.zone;
+  $("hint").textContent = z && state.enabled ? [z.direction, z.hint].filter(Boolean).join("  ") : "";
+  if (labOpen || (z && z.kind === "labyrinth")) {
+    $("hint").textContent = "";
+    if (!z) { $("act").textContent = ""; $("name").textContent = "Labyrinth"; $("meta").textContent = ""; }
+    else { $("act").textContent = "LAB"; $("name").textContent = z.name || "Labyrinth"; $("meta").textContent = z.id; }
+    main.append(labView());
+    return;
+  }
+  if (!z) {
+    $("act").textContent = ""; $("name").textContent = "Waiting for the game…"; $("meta").textContent = "";
+    main.append(el("div", { class: "empty" }, el("b", {}, "No area yet"), "Enter a zone in Path of Exile."));
+    document.title = "PoE Layouts";
+    return;
+  }
+  $("act").textContent = z.act ? `Act ${z.act}` : (KIND[z.kind] || "");
+  $("name").textContent = z.name || z.id;
+  $("meta").textContent = [z.level ? `lvl ${z.level}` : "", z.id, KIND[z.kind]].filter(Boolean).join(" · ");
+  document.title = `${z.name || z.id} — PoE Layouts`;
+
+  if (!state.enabled) {
+    main.append(el("div", { class: "empty" }, el("b", {}, "Hidden"), "Overlay is toggled off (poe-layouts toggle)."));
+    return;
+  }
+
+  const all = nodes(z);
+  const view = el("div", { class: "cards" });
+  if (!all.length) {
+    const msg = z.hint || z.notes.length ? "No layout images for this zone." : (z.kind === "campaign" || z.name ? "No data for this zone." : "Nothing to show here.");
+    const extra = z.missing_images ? el("span", { class: "warn" }, `${z.missing_images} images missing — run: poe-layouts fetch-data`) : "";
+    main.append(el("div", { class: "empty" }, el("b", {}, z.name || z.id), msg, extra));
+  } else {
+    // Breadcrumbs
+    crumbs.append(el("button", { onclick: () => go("") }, steps ? "All variants" : "All maps"));
+    if (path) {
+      const parts = path.split("_");
+      parts.forEach((_, i) => {
+        const code = parts.slice(0, i + 1).join("_");
+        crumbs.append(" › ", i === parts.length - 1 ? el("span", { class: "cur" }, parts[i]) : el("button", { onclick: () => go(code) }, parts[i]));
+      });
+    }
+    const isLeafCode = (c) => !childrenOf(all, c).length;
+    const leaves = all.filter((n) => isLeafCode(n.code));
+    const kids = !path && !steps ? leaves : childrenOf(all, path);
+    const leaf = all.find((n) => n.code === path);
+    const toggle = el("button", { onclick: () => setSteps(!steps), title: "Switch view" }, steps ? "Show all maps" : "Step by step");
+    if (path && !kids.length && leaf) {
+      crumbs.append(el("span", { class: "help" }, "Full map · Backspace — back"));
+      main.append(el("div", { class: "leaf" }, mapEl(leaf)));
+    } else {
+      const step = !path && !steps
+        ? (kids.length > 1 ? `${kids.length} possible maps — inset = area around the entrance, match it with your minimap` : "Only one layout")
+        : (path ? "Which one matches your minimap?" : "Pick the variant that matches the area around the entrance");
+      crumbs.append(el("span", { class: "help" }, step), " ", toggle);
+      view.dataset.n = String(kids.length);
+      view.dataset.tells = kids.some((n) => n.tell) ? "1" : "";
+      kids.forEach((n, i) => {
+        const tag = !path && !steps ? label(n.code) : (isLeafCode(n.code) ? "full map" : "");
+        // In the all-maps view, inset the variant's start view (tree root) to match against the minimap.
+        const root = n.code.split("_")[0];
+        const start = !path && !steps && root !== n.code ? all.find((m) => m.code === root) : null;
+        view.append(el("button", { class: "card", title: label(n.code), onclick: () => go(n.code) },
+          mapEl(n),
+          ...(start ? [insetEl(start.url, n.marks)] : []),
+          el("span", { class: "tag" }, String(i + 1), el("small", {}, tag)),
+          ...(n.tell ? [el("span", { class: "tell" }, n.tell)] : [])));
+      });
+      main.append(view);
+    }
+  }
+
+  const aside = el("aside");
+  if (state.timer) { const sp = el("div", { class: "box splits", id: "splits" }); fillSplits(sp); aside.append(sp); }
+  if (TRIALS.has(z.id)) aside.append(trialBox());
+  if (all.length) aside.append(legend());
+  if (z.facts.length) aside.append(el("div", { class: "box" }, el("h2", {}, "Zone"), el("ul", {}, ...z.facts.map((n) => el("li", {}, n)))));
+  if (z.notes.length) aside.append(el("div", { class: "box" }, el("h2", {}, "Notes"), el("ul", {}, ...z.notes.map((n) => el("li", {}, n)))));
+  if (z.hints.length) aside.append(el("div", { class: "box hints" }, el("h2", {}, "Hints"), ...z.hints.map((src) => el("img", { src, alt: "hint" }))));
+  if (z.missing_images && all.length) aside.append(el("div", { class: "box warn" }, `${z.missing_images} images missing — run poe-layouts fetch-data`));
+  if (aside.childElementCount) main.append(aside);
+  fit();
+}
+
+// Picks the column count that makes the (square) maps as large as possible in the space left.
+function fit() {
+  const v = document.querySelector(".cards");
+  if (!v || !v.dataset.n) return;
+  const n = +v.dataset.n, gap = 10, extra = v.dataset.tells ? 34 : 4;
+  v.style.gridTemplateColumns = "1fr";
+  const W = v.clientWidth, H = v.clientHeight;
+  let best = { c: 1, size: 0 };
+  for (let c = 1; c <= n; c++) {
+    const rows = Math.ceil(n / c);
+    const size = Math.min((W - gap * (c - 1)) / c - 4, (H - gap * (rows - 1)) / rows - extra);
+    if (size > best.size) best = { c, size };
+  }
+  const px = Math.max(160, Math.floor(best.size));
+  v.style.gridTemplateColumns = `repeat(${best.c}, ${px + 4}px)`;
+  v.style.setProperty("--cell", `${px}px`);
+}
+window.addEventListener("resize", fit);
+
+// ---- Run timer: server snapshot + local ticking while running ----
+let timerAt = 0;
+const T = () => state && state.timer;
+// Grows while running, but stops at the idle cutoff (no log activity for 5 min).
+const grow = () => {
+  const t = T();
+  if (!t || !t.running) return 0;
+  const g = Date.now() - timerAt;
+  return t.idle_in_ms != null ? Math.min(g, t.idle_in_ms) : g;
+};
+function fmt(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, r = s % 60;
+  const p = (x) => String(x).padStart(2, "0");
+  return h ? `${h}:${p(m)}:${p(r)}` : `${m}:${p(r)}`;
+}
+function delta(ms) {
+  return el("span", { class: ms <= 0 ? "ahead" : "behind" }, (ms <= 0 ? "−" : "+") + fmt(Math.abs(ms)));
+}
+async function timerCmd(cmd) {
+  if (cmd === "reset" && !confirm("Restart the run timer from this zone?")) return;
+  if (window.PoeEngine) return window.PoeEngine.timer(cmd); // static build
+  await fetch(`/api/timer/${cmd}`, { method: "POST", headers: { "x-poe-layouts": "1" } });
+}
+function drawTimer() {
+  const t = T(), box = $("timer");
+  box.replaceChildren();
+  box.classList.toggle("paused", !!t && !t.running);
+  if (!t) return;
+  const g = grow();
+  box.append(
+    el("span", { class: "t-sub" }, "zone ", el("b", {}, fmt(t.zone_ms + g))),
+    el("span", { class: "t-sub" }, `act ${t.act} `, el("b", {}, fmt(t.act_ms + g))),
+    el("span", { class: "t-total", title: "Run time (game closed / paused time excluded)" }, fmt(t.total_ms + g)),
+    el("button", { onclick: () => timerCmd("toggle"), title: "Pause / resume" }, t.paused ? "▶" : "⏸"),
+    el("button", { onclick: () => timerCmd("reset"), title: "New run from this zone" }, "↺"));
+  const sp = document.getElementById("splits");
+  if (sp) fillSplits(sp);
+}
+function fillSplits(box) {
+  const t = T();
+  box.replaceChildren();
+  if (!t) return;
+  const g = grow();
+  const rows = t.acts.map((a, i) => {
+    const cur = i === t.acts.length - 1, end = a.end_ms + (cur ? g : 0);
+    return el("tr", { class: cur ? "cur" : "" },
+      el("td", {}, `Act ${a.act}`),
+      el("td", { class: "n" }, fmt(a.ms + (cur ? g : 0))),
+      el("td", { class: "n muted" }, fmt(end)),
+      el("td", { class: "n" }, a.prev_end_ms != null && !cur ? delta(end - a.prev_end_ms) : ""));
+  });
+  box.append(el("h2", {}, "Splits"), el("table", {}, ...rows));
+  if (t.zone_total_ms > t.zone_ms + 999) box.append(el("div", { class: "t-sub" }, "this zone, all visits: ", el("b", {}, fmt(t.zone_total_ms + g))));
+  const recent = t.recent.filter((v) => v.ms >= 1000).slice(0, 10);
+  if (recent.length) {
+    box.append(el("h2", { style: "margin-top:10px" }, "Previous zones"),
+      el("table", {}, ...recent.map((v) => el("tr", {}, el("td", { class: v.campaign ? "" : "muted" }, v.name || v.id), el("td", { class: "n" }, fmt(v.ms))))));
+  }
+}
+setInterval(() => { if (T() && T().running) drawTimer(); }, 1000);
+
+
+// ---- Labyrinth: the user's own Lab Compass file from poelab.com (kept in this browser) ----
+let lab = null, labPos = null, labOpen = location.hash === "#lab", lastEnteredN = null;
+try { lab = JSON.parse(localStorage.getItem("lab")); labPos = JSON.parse(localStorage.getItem("labpos")); } catch (_) {}
+const labSave = () => { try { localStorage.setItem("lab", JSON.stringify(lab)); localStorage.setItem("labpos", JSON.stringify(labPos)); } catch (_) {} };
+const OPP = { N: "S", S: "N", E: "W", W: "E", NE: "SW", SW: "NE", NW: "SE", SE: "NW" };
+const ARROW = { N: "↑", S: "↓", E: "→", W: "←", NE: "↗", NW: "↖", SE: "↘", SW: "↙" };
+const utcToday = () => new Date().toISOString().slice(0, 10);
+
+function labGraph() {
+  const adj = {};
+  for (const r of lab.rooms) adj[r.id] = adj[r.id] || {};
+  for (const r of lab.rooms) for (const [dir, to] of Object.entries(r.exits || {})) {
+    adj[r.id][to] = adj[r.id][to] || dir;
+    adj[to] = adj[to] || {};
+    adj[to][r.id] = adj[to][r.id] || OPP[dir] || "";
+  }
+  return adj;
+}
+// Izaro's last room: the trial room furthest right.
+const labGoal = () => lab.rooms.reduce((a, r) => (+r.x > +a.x ? r : a)).id;
+// Fewest rooms; on a tie, avoid gauntlets/puzzles (they cost time).
+function labPath(from) {
+  const adj = labGraph(), goal = labGoal(), byId = Object.fromEntries(lab.rooms.map((r) => [r.id, r]));
+  const cost = (id) => 1 + 0.4 * ((byId[id] && byId[id].contents) || []).filter((c) => /gauntlet|puzzle/i.test(c)).length;
+  const dist = { [from]: 0 }, prev = { [from]: null }, todo = new Set([from]);
+  while (todo.size) {
+    let c = null;
+    for (const t of todo) if (c == null || dist[t] < dist[c]) c = t;
+    todo.delete(c);
+    if (c === goal) break;
+    for (const n of Object.keys(adj[c] || {})) {
+      const d = dist[c] + cost(n);
+      if (!(n in dist) || d < dist[n]) { dist[n] = d; prev[n] = c; todo.add(n); }
+    }
+  }
+  if (!(goal in prev)) return [];
+  const path = [];
+  for (let c = goal; c != null; c = prev[c]) path.unshift(c);
+  return path;
+}
+// Rooms share names; follow the graph from the current room like LabCompass does.
+function labTrack(name, zone) {
+  if (!lab) return;
+  if ((zone && zone.id === "Labyrinth_Airlock") || /^Aspirants' Plaza$/i.test(name)) { labPos = null; labSave(); return; }
+  if (!zone || zone.kind !== "labyrinth") return;
+  const same = (r) => r.name.toLowerCase() === name.toLowerCase();
+  const cur = labPos && labPos.date === lab.date ? labPos.room : null;
+  if (cur && same(lab.rooms.find((r) => r.id === cur) || { name: "" })) return; // same room again
+  const adj = labGraph();
+  // Same name on both sides (e.g. two trial rooms): not back where we came from, then further on.
+  const back = labPos && labPos.prev;
+  const near = cur ? lab.rooms.filter((r) => same(r) && adj[cur] && r.id in adj[cur])
+    .sort((a, b) => (a.id === back) - (b.id === back) || +b.x - +a.x) : [];
+  const any = lab.rooms.filter(same).sort((a, b) => +a.id - +b.id);
+  const pick = near[0] || (!cur && any.find((r) => r.id === "1")) || any[0];
+  if (pick) { labPos = { date: lab.date, room: pick.id, prev: cur }; labSave(); }
+}
+function labImport(text) {
+  try {
+    const j = JSON.parse(text);
+    if (!Array.isArray(j.rooms) || !j.rooms.every((r) => r.id && r.x != null && r.y != null)) throw new Error("not a Lab Compass file");
+    lab = j; labPos = null; labOpen = true; labSave(); render();
+  } catch (e) { alert(`Cannot read this file: ${e.message}`); }
+}
+function labPicker() {
+  const inp = el("input", { type: "file", accept: ".json,application/json" });
+  inp.addEventListener("change", async () => { if (inp.files[0]) labImport(await inp.files[0].text()); });
+  return el("div", { class: "labimport" },
+    el("b", {}, "Labyrinth: load today's Lab Compass file"),
+    el("span", {}, " — on poelab.com open today's lab notes (Normal / Cruel / Merciless / Uber), click “Lab Compass file”, then pick or drop the .json here. It stays in this browser."),
+    inp);
+}
+const BADGE = [[/gauntlet/i, "G", "#40c4ff"], [/puzzle/i, "P", "#40c4ff"], [/darkshrine/i, "D", "#ff5252"],
+  [/argus/i, "A", "#ffb020"], [/key/i, "K", "#cfd8dc"], [/door/i, "L", "#90a4ae"], [/trove|chest/i, "T", "#ffd740"]];
+function labView() {
+  const box = el("div", { class: "lab" });
+  if (!lab) { box.append(labPicker()); return box; }
+  const cur = labPos && labPos.date === lab.date ? labPos.room : null;
+  const path = labPath(cur || "1"), onPath = new Set(path), adj = labGraph();
+  const xs = lab.rooms.map((r) => +r.x), ys = lab.rooms.map((r) => +r.y);
+  const [x0, x1, y0, y1] = [Math.min(...xs) - 40, Math.max(...xs) + 40, Math.min(...ys) - 40, Math.max(...ys) + 52];
+  const NS = "http://www.w3.org/2000/svg";
+  const sv = (tag, a = {}, text) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
+  const svg = sv("svg", { viewBox: `${x0} ${y0} ${x1 - x0} ${y1 - y0}`, class: "labmap" });
+  const byId = Object.fromEntries(lab.rooms.map((r) => [r.id, r]));
+  const drawn = new Set();
+  for (const [a, ns] of Object.entries(adj)) for (const b of Object.keys(ns)) {
+    const k = [a, b].sort().join("-");
+    if (drawn.has(k) || !byId[a] || !byId[b]) continue;
+    drawn.add(k);
+    const i = path.indexOf(a), hot = i >= 0 && (path[i + 1] === b || path[i - 1] === b);
+    svg.append(sv("line", { x1: byId[a].x, y1: byId[a].y, x2: byId[b].x, y2: byId[b].y, class: hot ? "e hot" : "e" }));
+  }
+  for (const r of lab.rooms) {
+    const g = sv("g", { class: "room" + (onPath.has(r.id) ? " path" : "") + (r.id === cur ? " cur" : "") });
+    g.append(sv("title", {}, `${r.id}. ${r.name}${r.contents.length ? " — " + r.contents.join(", ") : ""}`));
+    g.append(sv("circle", { cx: r.x, cy: r.y, r: 17 }));
+    g.append(sv("text", { x: r.x, y: +r.y + 5, class: "n" }, r.id));
+    const badges = [];
+    for (const c of r.contents) { const b = BADGE.find(([re]) => re.test(c)); badges.push(b ? [b[1], b[2], c] : [c[0].toUpperCase(), "#fff", c]); }
+    badges.forEach(([t, color], i) => g.append(sv("text", { x: +r.x + (i - (badges.length - 1) / 2) * 14, y: +r.y + 34, class: "b", fill: color }, t)));
+    svg.append(g);
+  }
+  const stale = lab.date && lab.date !== utcToday();
+  const info = el("div", { class: "labinfo" },
+    el("b", {}, `${lab.difficulty || "Lab"} · ${lab.date || ""}`),
+    stale ? el("span", { class: "warn" }, " — not today's lab, load a fresh file") : "",
+    el("div", { class: "t-sub" }, `Izaro: ${[lab.weapon, lab.phase1, lab.phase2].filter(Boolean).join(" · ")}`
+      + ([lab.trap1, lab.trap2].some((t) => t && t !== "NoTrap") ? ` · traps: ${[lab.trap1, lab.trap2].filter((t) => t && t !== "NoTrap").join(", ")}` : "")));
+  // Next step: the compass direction of the exit to take.
+  let next = null;
+  if (cur) {
+    const i = path.indexOf(cur);
+    if (i >= 0 && path[i + 1]) { const to = path[i + 1], dir = adj[cur][to]; next = el("div", { class: "labnext" }, `${ARROW[dir] || ""} ${dir || ""} exit → room ${to} (${byId[to].name})`); }
+    else if (i === path.length - 1) next = el("div", { class: "labnext" }, "Izaro's room");
+  } else next = el("div", { class: "t-sub" }, "Position: enter the lab (Aspirants' Plaza → first room) and it will follow you.");
+  const rows = lab.rooms.map((r) => el("tr", { class: (r.id === cur ? "cur " : "") + (onPath.has(r.id) ? "path" : "") },
+    el("td", {}, r.id), el("td", {}, r.name), el("td", {}, r.contents.join(", ")),
+    el("td", { class: "muted" }, Object.entries(adj[r.id] || {}).map(([to, d]) => `${ARROW[d] || ""}${to}`).join(" "))));
+  box.append(info, next || "", svg,
+    el("div", { class: "t-sub" }, `Shortest path: ${path.join(" → ")} (${path.length} rooms). G gauntlet · P puzzle · D darkshrine · A Argus · K key · L locked door · T trove`),
+    el("table", { class: "labrooms" }, ...rows),
+    el("div", { class: "labbar" }, el("button", { onclick: () => { labOpen = false; render(); } }, "Back to maps"), " ", labPicker().lastChild,
+      " ", el("a", { href: "https://www.poelab.com/", target: "_blank", rel: "noopener" }, "poelab.com ↗")));
+  return box;
+}
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", async (e) => {
+  const f = e.dataTransfer && e.dataTransfer.files[0];
+  if (f && /\.json$/i.test(f.name)) { e.preventDefault(); labImport(await f.text()); }
+});
+
+let viewKey = "";
+function apply(s) {
+  const id = s.zone ? s.zone.id : null;
+  if (id !== zoneId) { path = ""; zoneId = id; }  // every zone change starts at the root
+  state = s;
+  timerAt = Date.now();
+  if (s.entered && s.entered.n !== lastEnteredN) { lastEnteredN = s.entered.n; labTrack(s.entered.name, s.zone); }
+  // Timer-only updates must not rebuild the maps.
+  const key = JSON.stringify({ ...s, seq: 0, timer: !!s.timer });
+  if (key !== viewKey) { viewKey = key; render(); }
+  drawTimer();
+}
+
+function connect() {
+  if (window.PoeEngine) return window.PoeEngine.start(apply); // static build: log read in the browser
+  const es = new EventSource("/events");
+  es.addEventListener("open", () => $("dot").classList.add("on"));
+  es.addEventListener("state", (e) => apply(JSON.parse(e.data)));
+  es.addEventListener("error", () => $("dot").classList.remove("on")); // EventSource reconnects itself
+}
+
+document.addEventListener("keydown", (e) => {
+  const z = state && state.zone;
+  if (!z) return;
+  const all = nodes(z);
+  if (e.key === "Backspace" || e.key === "Escape") { if (path) go(parentOf(path)); }
+  else if (e.key === "Home") go("");
+  else if (/^[1-9]$/.test(e.key)) {
+    const kids = !path && !steps ? all.filter((x) => !childrenOf(all, x.code).length) : childrenOf(all, path);
+    const n = kids[+e.key - 1];
+    if (n) go(n.code);
+  } else return;
+  e.preventDefault();
+});
+
+$("labbtn").addEventListener("click", () => { labOpen = !labOpen; render(); });
+connect();
+</script>
+</body>
+</html>
